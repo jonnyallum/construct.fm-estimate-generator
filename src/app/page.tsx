@@ -48,7 +48,13 @@ export default function EstimateGenerator() {
   const [prelimsPercent, setPrelimsPercent] = useState(8)
   const [selectedCategory, setSelectedCategory] = useState(categories[0])
   const [search, setSearch] = useState('')
-  const [showSummary, setShowSummary] = useState(false)
+  const [viewMode, setViewMode] = useState<'edit' | 'estimate' | 'invoice'>('edit')
+  const [invoiceNumber, setInvoiceNumber] = useState('')
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0])
+  const [dueDate, setDueDate] = useState('')
+  const [paymentTerms, setPaymentTerms] = useState('14 days from invoice')
+  const [bankDetails, setBankDetails] = useState('Sort Code: XX-XX-XX | Account: XXXXXXXX')
+  const [notes, setNotes] = useState('')
   const nextId = useRef(1)
 
   const filteredRates = catalogue.filter((e) => {
@@ -89,10 +95,22 @@ export default function EstimateGenerator() {
           </div>
         </div>
         <div className="flex gap-3">
-          <button onClick={() => setShowSummary(!showSummary)} className="px-4 py-2 rounded-lg bg-cfm-orange text-black font-semibold text-sm hover:bg-cfm-orange-hover transition-colors">
-            {showSummary ? 'Edit Estimate' : 'View Summary'}
-          </button>
-          {showSummary && (
+          {viewMode !== 'edit' && (
+            <button onClick={() => setViewMode('edit')} className="px-4 py-2 rounded-lg border border-cfm-border text-cfm-muted font-semibold text-sm hover:text-cfm-text hover:border-cfm-text transition-colors">
+              ← Edit
+            </button>
+          )}
+          {viewMode === 'edit' && (
+            <>
+              <button onClick={() => setViewMode('estimate')} className="px-4 py-2 rounded-lg bg-cfm-orange text-black font-semibold text-sm hover:bg-cfm-orange-hover transition-colors">
+                View Estimate
+              </button>
+              <button onClick={() => { if (!invoiceNumber) setInvoiceNumber('INV-' + String(Date.now()).slice(-6)); setViewMode('invoice') }} className="px-4 py-2 rounded-lg border border-cfm-green text-cfm-green font-semibold text-sm hover:bg-cfm-green hover:text-black transition-colors">
+                Generate Invoice
+              </button>
+            </>
+          )}
+          {viewMode !== 'edit' && (
             <button onClick={() => window.print()} className="px-4 py-2 rounded-lg border border-cfm-orange text-cfm-orange font-semibold text-sm hover:bg-cfm-orange hover:text-black transition-colors">
               Print / PDF
             </button>
@@ -100,7 +118,7 @@ export default function EstimateGenerator() {
         </div>
       </header>
 
-      {!showSummary ? (
+      {viewMode === 'edit' ? (
         <>
           {/* Project Details */}
           <section className="rounded-xl bg-cfm-card border border-cfm-border p-6 mb-8">
@@ -231,7 +249,7 @@ export default function EstimateGenerator() {
           )}
         </>
       ) : (
-        /* ── PRINT SUMMARY VIEW ── */
+        /* ── PRINT VIEW (ESTIMATE or INVOICE) ── */
         <div className="print-view">
           {/* Print Header */}
           <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-cfm-orange">
@@ -243,11 +261,49 @@ export default function EstimateGenerator() {
               </div>
             </div>
             <div className="text-right text-sm">
-              <p className="font-bold text-cfm-orange">ESTIMATE</p>
+              <p className={`font-bold text-lg ${viewMode === 'invoice' ? 'text-cfm-green' : 'text-cfm-orange'}`}>
+                {viewMode === 'invoice' ? 'INVOICE' : 'ESTIMATE'}
+              </p>
+              {viewMode === 'invoice' && invoiceNumber && <p className="font-medium">{invoiceNumber}</p>}
               {projectRef && <p className="text-cfm-muted">Ref: {projectRef}</p>}
-              <p className="text-cfm-muted">{new Date().toLocaleDateString('en-GB')}</p>
+              <p className="text-cfm-muted">{viewMode === 'invoice' ? invoiceDate : new Date().toLocaleDateString('en-GB')}</p>
             </div>
           </div>
+
+          {/* Invoice-specific: editable fields (no-print) */}
+          {viewMode === 'invoice' && (
+            <div className="no-print rounded-xl bg-cfm-card border border-cfm-border p-6 mb-8">
+              <h3 className="text-sm font-bold text-cfm-green mb-3">Invoice Settings</h3>
+              <div className="grid md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs text-cfm-muted mb-1">Invoice Number</label>
+                  <input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} className="w-full" />
+                </div>
+                <div>
+                  <label className="block text-xs text-cfm-muted mb-1">Invoice Date</label>
+                  <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="w-full" />
+                </div>
+                <div>
+                  <label className="block text-xs text-cfm-muted mb-1">Due Date</label>
+                  <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full" />
+                </div>
+                <div>
+                  <label className="block text-xs text-cfm-muted mb-1">Payment Terms</label>
+                  <input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} className="w-full" />
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-xs text-cfm-muted mb-1">Bank Details</label>
+                  <input value={bankDetails} onChange={(e) => setBankDetails(e.target.value)} className="w-full" />
+                </div>
+                <div>
+                  <label className="block text-xs text-cfm-muted mb-1">Notes</label>
+                  <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Stage 2 payment" className="w-full" />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Client & Project */}
           <div className="grid grid-cols-2 gap-8 mb-8">
@@ -296,11 +352,46 @@ export default function EstimateGenerator() {
             <div className="border-t-2 border-cfm-orange pt-2 flex justify-between text-lg font-bold"><span>Grand Total</span><span className="text-cfm-orange">{fmt(estimate.grandTotal)}</span></div>
           </div>
 
+          {/* Invoice: Due Date & Bank Details */}
+          {viewMode === 'invoice' && (
+            <div className="mt-8 p-4 rounded-lg border border-cfm-green/30 bg-cfm-green/5">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-xs text-cfm-muted uppercase tracking-wider mb-1">Payment Terms</p>
+                  <p className="font-medium">{paymentTerms}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-cfm-muted uppercase tracking-wider mb-1">Due Date</p>
+                  <p className="font-bold text-cfm-green">{dueDate || 'TBC'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-cfm-muted uppercase tracking-wider mb-1">Bank Details</p>
+                  <p className="font-medium">{bankDetails}</p>
+                </div>
+                {notes && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-cfm-muted uppercase tracking-wider mb-1">Notes</p>
+                    <p>{notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="mt-12 pt-6 border-t border-cfm-border text-xs text-cfm-muted space-y-1">
-            <p>This estimate is valid for {BUSINESS.quoteValidityDays} days from the date above.</p>
-            <p>Payment terms: {BUSINESS.paymentTermsDays} days from invoice. Defects liability: {BUSINESS.defectsLiabilityMonths} months.</p>
-            <p>All prices exclusive of VAT unless stated. Subject to site survey and final specification.</p>
+            {viewMode === 'invoice' ? (
+              <>
+                <p>Please make payment by the due date shown above.</p>
+                <p>Late payments may incur interest at 8% above the Bank of England base rate per the Late Payment of Commercial Debts Act 1998.</p>
+              </>
+            ) : (
+              <>
+                <p>This estimate is valid for {BUSINESS.quoteValidityDays} days from the date above.</p>
+                <p>Payment terms: {BUSINESS.paymentTermsDays} days from invoice. Defects liability: {BUSINESS.defectsLiabilityMonths} months.</p>
+                <p>All prices exclusive of VAT unless stated. Subject to site survey and final specification.</p>
+              </>
+            )}
             <p className="mt-2 font-medium text-cfm-text">Construct FM Ltd · Havant, Hampshire · constructfm.co.uk</p>
           </div>
         </div>
