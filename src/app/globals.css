@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cfm-dark: #0a0a0a;
+  --color-cfm-card: #141414;
+  --color-cfm-border: #1e1e1e;
+  --color-cfm-orange: #f2a735;
+  --color-cfm-orange-hover: #e09520;
+  --color-cfm-text: #e5e5e5;
+  --color-cfm-muted: #a3a3a3;
+  --color-cfm-green: #22c55e;
+  --color-cfm-red: #ef4444;
+  --font-heading: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--color-cfm-dark);
+  color: var(--color-cfm-text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  ::selection { background: rgba(242, 167, 53, 0.3); }
+  input, select, textarea {
+    background: var(--color-cfm-card);
+    border: 1px solid var(--color-cfm-border);
+    color: var(--color-cfm-text);
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--color-cfm-orange);
+    box-shadow: 0 0 0 2px rgba(242, 167, 53, 0.15);
+  }
+}
+
+@media print {
+  body { background: white; color: black; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+}
