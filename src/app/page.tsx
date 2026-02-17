@@ -8,6 +8,7 @@ import {
   PROVISIONAL_SUMS, LABOUR_RATES, BUSINESS,
   calculateEstimate, type LineItem,
 } from '@/lib/pricing'
+import { exportToExcel, type ExportData } from '@/lib/excelExport'
 
 // ── Flatten all rate categories into a searchable catalogue ──
 type RateEntry = { key: string; category: string; description: string; rate: number; unit: string }
@@ -83,6 +84,38 @@ export default function EstimateGenerator() {
 
   const estimate = calculateEstimate(items, prelimsPercent)
 
+  const handleExcelExport = async (type: 'quotation' | 'invoice') => {
+    const prelimsItems = [{
+      description: 'Management', quantity: 1, unit: 'Item',
+      rate: estimate.prelimsValue * 0.4, total: estimate.prelimsValue * 0.4,
+    }, {
+      description: 'Segregation', quantity: 1, unit: 'Item',
+      rate: estimate.prelimsValue * 0.15, total: estimate.prelimsValue * 0.15,
+    }, {
+      description: 'Access', quantity: 1, unit: 'Item',
+      rate: estimate.prelimsValue * 0.2, total: estimate.prelimsValue * 0.2,
+    }, {
+      description: 'Waste management', quantity: 1, unit: 'Item',
+      rate: estimate.prelimsValue * 0.25, total: estimate.prelimsValue * 0.25,
+    }]
+
+    const mainItems = estimate.items.map(i => ({
+      description: i.description, quantity: i.quantity,
+      unit: i.unit, rate: i.rate, total: i.total!,
+    }))
+
+    const exportData: ExportData = {
+      clientName, projectTitle, reference: projectRef,
+      date: type === 'invoice' ? invoiceDate : new Date().toISOString().split('T')[0],
+      prelimsItems, prelimsTotal: estimate.prelimsValue,
+      mainItems, mainContractTotal: estimate.mainContractTotal,
+      subtotalExVat: estimate.subtotalExVat, vat: estimate.vat,
+      grandTotal: estimate.grandTotal,
+      invoiceNumber: type === 'invoice' ? invoiceNumber : undefined,
+    }
+    await exportToExcel(exportData, type)
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
@@ -111,9 +144,14 @@ export default function EstimateGenerator() {
             </>
           )}
           {viewMode !== 'edit' && (
-            <button onClick={() => window.print()} className="px-4 py-2 rounded-lg border border-cfm-orange text-cfm-orange font-semibold text-sm hover:bg-cfm-orange hover:text-black transition-colors">
-              Print / PDF
-            </button>
+            <>
+              <button onClick={() => handleExcelExport(viewMode === 'invoice' ? 'invoice' : 'quotation')} className="px-4 py-2 rounded-lg border border-cfm-green text-cfm-green font-semibold text-sm hover:bg-cfm-green hover:text-black transition-colors">
+                📥 Download Excel
+              </button>
+              <button onClick={() => window.print()} className="px-4 py-2 rounded-lg border border-cfm-orange text-cfm-orange font-semibold text-sm hover:bg-cfm-orange hover:text-black transition-colors">
+                Print / PDF
+              </button>
+            </>
           )}
         </div>
       </header>
